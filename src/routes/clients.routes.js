@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 // Importar models de Mongo
 //=============================
 const Client = require('../models/client.model');
+const Application = require('../models/application.model');
 
 //=============================
 // Importar middlewares y validaciones
@@ -16,6 +17,7 @@ const Client = require('../models/client.model');
 const { checkToken, checkAdmin } = require('../middlewares/jwt');
 
 const { ClientDataDTO, ClientIdDTO } = require('../validations/client');
+const { application } = require('express');
 
 //=============================
 // Crear Cliente
@@ -60,7 +62,25 @@ router.post('/', [checkToken, checkAdmin], async (req, res, next) => {
 // Traer todos los clientes
 //=============================
 router.get('/', async (req, res, next) => {
-    const clientes = await Client.find();
+    const clientes = await Client.find().lean();
+
+    await Promise.all(
+        //Traigo la ultima aplicacion si es que tiene
+        await clientes.map(async (cliente, index) => {
+            const application = await Application.findOne(
+                {
+                    cliente: cliente._id,
+                },
+                'fecha'
+            ).sort({ fecha: -1 });
+
+            if (application) {
+                clientes[index].ultimaAplicacion = application;
+            } else {
+                clientes[index].ultimaAplicacion = false;
+            }
+        })
+    );
 
     return res.json({ ok: true, clientes });
 });
