@@ -15,50 +15,125 @@ const Client = require('../models/client.model');
 //=============================
 const { checkToken, checkAdmin } = require('../middlewares/jwt');
 
-const { ClientCreateDTO, ClientGetDTO } = require('../validations/client');
+const { ClientDataDTO, ClientIdDTO } = require('../validations/client');
 
 //=============================
 // Crear Cliente
 //=============================
 router.post('/', [checkToken, checkAdmin], async (req, res, next) => {
-  //Valido DTO
-  validDTO = ClientCreateDTO.validate(req.body);
+    //Valido DTO
+    validDTO = ClientDataDTO.validate(req.body);
 
-  if (validDTO.error) {
-    return res
-      .status(400)
-      .json({ ok: false, error: validDTO.error.details[0] });
-  }
-
-  const nombre = validDTO.value.nombre;
-  const direccion = validDTO.value.direccion;
-  const tipo = validDTO.value.tipo;
-  const nroOblea = validDTO.value.nroOblea;
-  const responsable = validDTO.value.responsable;
-  const telefono = validDTO.value.telefono;
-
-  new Client({
-    nombre,
-    direccion,
-    tipo,
-    nroOblea,
-    responsable,
-    telefono,
-  }).save((dbError, client) => {
-    if (dbError) {
-      return res
-        .status(400)
-        .json({ ok: false, error: dbError.errors || dbError });
+    if (validDTO.error) {
+        return res
+            .status(400)
+            .json({ ok: false, error: validDTO.error.details[0] });
     }
 
-    if (!client) {
-      return res
-        .status(409)
-        .json({ ok: false, error: 'No se pudocrear el Cliente!' });
+    const data = {
+        nombre: validDTO.value.nombre,
+        direccion: validDTO.value.direccion,
+        tipo: validDTO.value.tipo,
+        nroOblea: validDTO.value.nroOblea,
+        responsable: validDTO.value.responsable,
+        telefono: validDTO.value.telefono,
+    };
+
+    new Client(data).save((dbError, client) => {
+        if (dbError) {
+            return res
+                .status(400)
+                .json({ ok: false, error: dbError.errors || dbError });
+        }
+
+        if (!client) {
+            return res
+                .status(409)
+                .json({ ok: false, error: 'No se pudocrear el Cliente!' });
+        }
+
+        return res.status(201).json({ ok: true, client });
+    });
+});
+
+//=============================
+// Traer todos los clientes
+//=============================
+router.get('/', async (req, res, next) => {
+    const clientes = await Client.find();
+
+    return res.json({ ok: true, clientes });
+});
+
+//=============================
+// Traer un cliente por Id
+//=============================
+router.get('/:id', async (req, res, next) => {
+    const validDTO = ClientIdDTO.validate(req.params);
+
+    if (validDTO.error) {
+        return res
+            .status(400)
+            .json({ ok: false, error: validDTO.error.details[0] });
     }
 
-    return res.status(201).json({ ok: true, client });
-  });
+    const cliente = await Client.findById(req.params.id);
+
+    if (!cliente) {
+        return res
+            .status(404)
+            .json({ ok: false, error: 'No existe el cliente' });
+    }
+
+    return res.json({ ok: true, cliente });
+});
+
+//=============================
+// Modificar Cliente
+//=============================
+router.put('/:id', [checkToken, checkAdmin], async (req, res, next) => {
+    //Valido id
+    let validDTO = ClientIdDTO.validate(req.params);
+
+    if (validDTO.error) {
+        return res
+            .status(400)
+            .json({ ok: false, error: validDTO.error.details[0] });
+    }
+
+    const id = validDTO.value.id;
+
+    //Valido body
+    validDTO = ClientDataDTO.validate(req.body);
+
+    if (validDTO.error) {
+        return res
+            .status(400)
+            .json({ ok: false, error: validDTO.error.details[0] });
+    }
+
+    let cliente = await Client.findById(id);
+
+    if (!cliente) {
+        return res
+            .status(404)
+            .json({ ok: false, error: 'No existe el cliente' });
+    }
+
+    cliente.nombre = validDTO.value.nombre;
+    cliente.direccion = validDTO.value.direccion;
+    cliente.tipo = validDTO.value.tipo;
+    cliente.nroOblea = validDTO.value.nroOblea;
+    cliente.responsable = validDTO.value.responsable;
+    cliente.telefono = validDTO.value.telefono;
+
+    cliente.save({ new: true, runValidators: true }, (error, uClient) => {
+        if (error) {
+            return res.status(400).json({ ok: false, error });
+        }
+
+        return res.status(202).json({ ok: true, cliente: uClient });
+    });
 });
 
 module.exports = router;
