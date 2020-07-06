@@ -74,7 +74,7 @@ router.get('/', async (req, res, next) => {
             ).sort({ fecha: -1 });
 
             if (application) {
-                clientes[index].ultimaAplicacion = application;
+                clientes[index].ultimaAplicacion = application.fecha;
             } else {
                 clientes[index].ultimaAplicacion = false;
             }
