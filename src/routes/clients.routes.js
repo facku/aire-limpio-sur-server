@@ -17,7 +17,6 @@ const Application = require('../models/application.model');
 const { checkToken, checkAdmin } = require('../middlewares/jwt');
 
 const { ClientDataDTO, ClientIdDTO } = require('../validations/client');
-const { application } = require('express');
 
 //=============================
 // Crear Cliente
